@@ -23,7 +23,11 @@ const UserSchema = new Schema({
         type: String,
         enum: ["admin", "superadmin"],
         default: "admin"
-    }
+    },
+    favoritePosts: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Post'
+    }]
 })
 
 

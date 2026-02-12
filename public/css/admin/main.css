@@ -1,3 +1,115 @@
 .list-group-item.active {
     background-color: tomato;
 }
+
+.social-feed .post-card {
+    border-radius: 12px;
+    border: 1px solid #e4e6eb;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+.social-feed .post-card .card-body {
+    padding: 1rem 1.25rem;
+}
+.social-feed .post-card .card-title {
+    font-size: 1.1rem;
+    margin-bottom: 0.25rem;
+}
+.social-feed .post-author {
+    font-size: 0.85rem;
+    color: #65676b;
+    margin-bottom: 0.5rem;
+}
+.social-feed .reaction-bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.5rem 0;
+    border-top: 1px solid #e4e6eb;
+    border-bottom: 1px solid #e4e6eb;
+    margin: 0.5rem 0;
+}
+.social-feed .reaction-bar .reaction-label {
+    font-size: 0.8rem;
+    color: #65676b;
+    margin-right: 0.25rem;
+}
+.social-feed .reaction-btn {
+    padding: 0.25rem 0.5rem;
+    border-radius: 18px;
+    font-size: 0.8rem;
+}
+.social-feed .reaction-btn.active-reaction {
+    background-color: #e7f3ff;
+    border-color: #0d6efd;
+    color: #0d6efd;
+}
+.social-feed .reaction-total-text {
+    font-size: 0.8rem;
+    color: #65676b;
+    margin-right: 0.5rem;
+}
+.social-feed .comments-section {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #e4e6eb;
+}
+.social-feed .comments-section .section-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #050505;
+    margin-bottom: 0.5rem;
+}
+.social-feed .comments-section .comments-toggle-btn {
+    text-decoration: none;
+    color: inherit;
+    margin-bottom: 0.5rem;
+}
+.social-feed .comments-section .comments-toggle-btn:hover {
+    color: #0d6efd;
+}
+.social-feed .comments-section .comments-toggle-icon {
+    transition: transform 0.2s ease;
+}
+.social-feed .comments-section.comments-collapsed .comments-toggle-icon {
+    transform: rotate(-90deg);
+}
+.social-feed .comments-section .comments-content {
+    overflow: hidden;
+}
+.social-feed .comments-section.comments-collapsed .comments-content {
+    display: none;
+}
+.social-feed .comments-section .comments-count {
+    font-weight: normal;
+    color: #65676b;
+}
+.social-feed .comment-table {
+    margin-bottom: 0.75rem;
+    font-size: 0.875rem;
+}
+.social-feed .comment-table thead th {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: #65676b;
+    border-bottom: 1px solid #e4e6eb;
+    padding: 0.4rem 0.5rem;
+}
+.social-feed .comment-table tbody td {
+    padding: 0.5rem;
+    vertical-align: middle;
+}
+.social-feed .comment-form {
+    margin-top: 0.5rem;
+}
+.social-feed .create-post-card .card {
+    border-radius: 12px;
+    border: 1px solid #e4e6eb;
+}
+.social-feed .create-post-card .card-body {
+    padding: 1.25rem;
+}
+
+.images-preview img {
+    border-radius: 6px;
+}

@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <link rel="stylesheet" href="/bootstrap.css">
+    <link rel="stylesheet" href="/bootstrap-icons.css">
+    <link rel="stylesheet" href="/css/admin/main.css">
+</head>
+<body>
+<%- include('/admin/partials/navbar.ejs')%>
+<div class="container-fluid mt-5">
+    <div class="row">
+        <%- include('/admin/partials/sidebar.ejs')%>
+        <div class="col-10">
+            <div class="d-flex align-items-center mb-3">
+                <h1>Social</h1>
+            </div>
+            <ul class="nav nav-tabs mb-3">
+                <li class="nav-item">
+                    <a class="nav-link <%= tab === 'all' ? 'active' : '' %>" href="/admin/social?tab=all">All Posts</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link <%= tab === 'my-posts' ? 'active' : '' %>" href="/admin/social?tab=my-posts">My Posts</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link <%= tab === 'favorites' ? 'active' : '' %>" href="/admin/social?tab=favorites">Favorites</a>
+                </li>
+            </ul>
+            <% if (tab === 'all' || tab === 'my-posts') { %>
+            <div class="row mb-4 create-post-card">
+                <div class="col-10 offset-1">
+                    <div class="card">
+                        <div class="card-body">
+                            <form action="/admin/social" method="post" id="create-post-form" enctype="multipart/form-data">
+                                <div class="mb-3">
+                                    <label for="description">What's on your mind?</label>
+                                    <textarea name="description" id="description" class="form-control" rows="3" placeholder="Write something..." required></textarea>
+                                </div>
+                                <div class="mb-3 d-flex flex-wrap align-items-center gap-2">
+                                    <input type="file" name="images" id="images" class="d-none" accept="image/jpeg,image/png,image/gif,image/webp" multiple>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-choose-images" title="Add images">
+                                        <i class="bi bi-images"></i> Images
+                                    </button>
+                                    <span class="small text-muted" id="images-chosen"></span>
+                                </div>
+                                <div id="images-preview" class="images-preview d-flex flex-wrap gap-2 mb-3"></div>
+                                <button type="submit" class="btn btn-primary">Post</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <% } %>
+            <hr>
+            <div class="row social-feed">
+                <div class="col-10 offset-1">
+                    <% if (posts.length === 0) { %>
+                    <p class="text-muted">No posts yet.</p>
+                    <% } %>
+                    <% posts.forEach(function(post){ %>
+                    <% const currentUserReaction = (post.reactions || []).find(function(r){ return String(r.userId && r.userId._id ? r.userId._id : r.userId) === String(user._id); }); %>
+                    <% const canDeletePost = post.author && String(post.author._id) === String(user._id); %>
+                    <div class="card mb-3 post-card" data-id="<%= post._id %>">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <h5 class="card-title"><%= post.description && post.description.length > 0 ? post.description : post.text %></h5>
+                                <div class="d-flex align-items-center gap-1">
+                                    <% if (canDeletePost) { %>
+                                    <button type="button" class="btn btn-link btn-sm p-0 text-danger delete-post-btn" data-id="<%= post._id %>" title="Delete post"><i class="bi bi-trash"></i></button>
+                                    <% } %>
+                                    <button type="button" class="btn btn-link btn-sm p-0 favorite-btn" data-id="<%= post._id %>" title="Favorite">
+                                    <i class="bi bi-star<%= favoriteIds.indexOf(post._id.toString()) >= 0 ? '-fill text-warning' : '' %>"></i>
+                                </button>
+                                </div>
+                            </div>
+                            <% if (post.images && post.images.length > 0) { %>
+                            <div class="post-images mb-2">
+                                <% post.images.forEach(function(img){ %>
+                                <img src="<%= img %>" alt="Post image" class="img-fluid rounded me-1 mb-1" style="max-height: 300px;">
+                                <% }); %>
+                            </div>
+                            <% } %>
+                            <p class="card-text post-author">
+                                <i class="bi bi-person"></i> <%= post.author.username %>
+                            </p>
+                            <div class="reaction-bar">
+                                <span class="reaction-total-text"><span class="reaction-total"><%= (post.reactions || []).length %></span> <%= (post.reactions || []).length === 1 ? 'person' : 'people' %> reacted</span>
+                                <span class="reaction-label">Choose reaction:</span>
+                                <% const reactionTypes = [{t:'like', icon:'hand-thumbs-up'}, {t:'love', icon:'heart'}, {t:'laugh', icon:'emoji-laughing'}, {t:'wow', icon:'emoji-surprise'}, {t:'sad', icon:'emoji-frown'}, {t:'angry', icon:'emoji-angry'}]; %>
+                                <% reactionTypes.forEach(function(r){ %>
+                                <button type="button" class="btn btn-sm btn-outline-secondary reaction-btn <%= (currentUserReaction && currentUserReaction.type === r.t) ? 'active-reaction' : '' %>" data-id="<%= post._id %>" data-type="<%= r.t %>" title="<%= r.t %>">
+                                    <i class="bi bi-<%= r.icon %>"></i>
+                                    <span class="reaction-count" data-type="<%= r.t %>"><%= (post.reactions || []).filter(function(x){ return x.type === r.t; }).length %></span>
+                                </button>
+                                <% }); %>
+                            </div>
+                            <div class="comments-section comments" data-post-id="<%= post._id %>" data-post-owner-id="<%= post.author._id %>" data-current-user-id="<%= user._id %>">
+                                <button type="button" class="comments-toggle-btn section-title btn btn-link btn-sm p-0 text-start d-flex align-items-center gap-1" aria-expanded="true">
+                                    <i class="bi bi-chevron-down comments-toggle-icon"></i>
+                                    <span>Comments</span>
+                                    <span class="comments-count">(<%= (post.comments || []).length %>)</span>
+                                </button>
+                                <div class="comments-content">
+                                <div class="comment-list">
+                                    <% (post.commentsTopLevel || []).forEach(function(c){ %>
+                                    <% const canDeleteC = post.author && String(post.author._id) === String(user._id); %>
+                                    <div class="comment-block mb-2" data-comment-id="<%= c._id %>" data-parent-id="">
+                                        <div class="comment-row d-flex justify-content-between align-items-start flex-wrap gap-1 p-2 rounded bg-light">
+                                            <div class="d-flex flex-column">
+                                                <span class="fw-semibold small"><%= c.author.username %></span>
+                                                <span class="small"><%= c.text %></span>
+                                                <span class="small text-muted"><%= c.createdAt ? new Date(c.createdAt).toLocaleString() : '' %></span>
+                                            </div>
+                                            <div class="d-flex align-items-center gap-1">
+                                                <div class="comment-reactions d-flex flex-wrap gap-1">
+                                                    <% const reactionTypes = [{t:'like', icon:'hand-thumbs-up'}, {t:'love', icon:'heart'}, {t:'laugh', icon:'emoji-laughing'}, {t:'wow', icon:'emoji-surprise'}, {t:'sad', icon:'emoji-frown'}, {t:'angry', icon:'emoji-angry'}]; %>
+                                                    <% reactionTypes.forEach(function(r){ %>
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary p-1 comment-reaction-btn" data-comment-id="<%= c._id %>" data-type="<%= r.t %>" title="<%= r.t %>">
+                                                        <i class="bi bi-<%= r.icon %>"></i><span class="comment-reaction-count" data-type="<%= r.t %>"><%= (c.reactions || []).filter(function(x){ return x.type === r.t; }).length %></span>
+                                                    </button>
+                                                    <% }); %>
+                                                </div>
+                                                <button type="button" class="btn btn-link btn-sm p-0 reply-toggle-btn">Reply</button>
+                                                <% if (canDeleteC) { %>
+                                                <button type="button" class="btn btn-link btn-sm p-0 text-danger delete-comment-btn" data-comment-id="<%= c._id %>"><i class="bi bi-trash"></i></button>
+                                                <% } %>
+                                            </div>
+                                        </div>
+                                        <div class="reply-form-wrap d-none mt-1 ms-3">
+                                            <form class="reply-form d-flex gap-2">
+                                                <input type="text" class="form-control form-control-sm reply-input" placeholder="Reply..." name="text">
+                                                <button type="submit" class="btn btn-sm btn-primary">Send</button>
+                                            </form>
+                                        </div>
+                                        <div class="replies ms-3 mt-1">
+                                            <% (c.replies || []).forEach(function(r){ %>
+                                            <% const canDeleteR = post.author && String(post.author._id) === String(user._id); %>
+                                            <div class="comment-block mb-2" data-comment-id="<%= r._id %>" data-parent-id="<%= c._id %>">
+                                                <div class="comment-row d-flex justify-content-between align-items-start flex-wrap gap-1 p-2 rounded bg-light">
+                                                    <div class="d-flex flex-column">
+                                                        <span class="fw-semibold small"><%= r.author.username %></span>
+                                                        <span class="small"><%= r.text %></span>
+                                                        <span class="small text-muted"><%= r.createdAt ? new Date(r.createdAt).toLocaleString() : '' %></span>
+                                                    </div>
+                                                    <div class="d-flex align-items-center gap-1">
+                                                        <div class="comment-reactions d-flex flex-wrap gap-1">
+                                                            <% reactionTypes.forEach(function(rr){ %>
+                                                            <button type="button" class="btn btn-sm btn-outline-secondary p-1 comment-reaction-btn" data-comment-id="<%= r._id %>" data-type="<%= rr.t %>" title="<%= rr.t %>">
+                                                                <i class="bi bi-<%= rr.icon %>"></i><span class="comment-reaction-count" data-type="<%= rr.t %>"><%= (r.reactions || []).filter(function(x){ return x.type === rr.t; }).length %></span>
+                                                            </button>
+                                                            <% }); %>
+                                                        </div>
+                                                        <% if (canDeleteR) { %>
+                                                        <button type="button" class="btn btn-link btn-sm p-0 text-danger delete-comment-btn" data-comment-id="<%= r._id %>"><i class="bi bi-trash"></i></button>
+                                                        <% } %>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <% }); %>
+                                        </div>
+                                    </div>
+                                    <% }); %>
+                                </div>
+                                <form class="comment-form d-flex gap-2 mt-2">
+                                    <input type="text" class="form-control form-control-sm comment-input" placeholder="Write a comment..." name="text">
+                                    <button type="submit" class="btn btn-sm btn-primary">Send</button>
+                                </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <% }) %>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="/jquery.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+<script>
+   (function() {
+       var btnImages = document.getElementById('btn-choose-images');
+       var inputImages = document.getElementById('images');
+       var spanImages = document.getElementById('images-chosen');
+       if (btnImages && inputImages) {
+           var previewContainer = document.getElementById('images-preview');
+           var currentUrls = [];
+           btnImages.addEventListener('click', function() { inputImages.click(); });
+           inputImages.addEventListener('change', function() {
+               currentUrls.forEach(function(u) { URL.revokeObjectURL(u); });
+               currentUrls = [];
+               if (previewContainer) previewContainer.innerHTML = '';
+               var n = this.files.length;
+               if (spanImages) spanImages.textContent = n > 0 ? n + ' file(s) chosen' : '';
+               for (var i = 0; i < n; i++) {
+                   var file = this.files[i];
+                   if (!file.type.match('^image/')) continue;
+                   var url = URL.createObjectURL(file);
+                   currentUrls.push(url);
+                   var img = document.createElement('img');
+                   img.src = url;
+                   img.alt = 'Preview';
+                   img.className = 'img-thumbnail';
+                   img.style.maxWidth = '120px';
+                   img.style.maxHeight = '120px';
+                   img.style.objectFit = 'cover';
+                   if (previewContainer) previewContainer.appendChild(img);
+               }
+           });
+       }
+   })();
+   document.querySelectorAll('.favorite-btn').forEach(btn => {
+       btn.addEventListener('click', function() {
+           let id = this.getAttribute('data-id');
+           fetch(`/admin/social/${id}/favorite`, { method: 'POST', headers: {'Content-Type': 'application/json'} })
+               .then(res => res.json())
+               .then(data => {
+                   let icon = this.querySelector('i');
+                   if (data.favorite) {
+                       icon.classList.remove('bi-star');
+                       icon.classList.add('bi-star-fill', 'text-warning');
+                   } else {
+                       icon.classList.add('bi-star');
+                       icon.classList.remove('bi-star-fill', 'text-warning');
+                   }
+               });
+       });
+   });
+
+   document.querySelectorAll('.reaction-btn').forEach(btn => {
+       btn.addEventListener('click', function() {
+           let id = this.getAttribute('data-id');
+           let type = this.getAttribute('data-type');
+           let card = this.closest('.post-card');
+           card.querySelectorAll('.reaction-btn').forEach(function(b){ b.classList.remove('active-reaction'); });
+           this.classList.add('active-reaction');
+           fetch(`/admin/social/${id}/reaction`, {
+               method: 'POST',
+               headers: {'Content-Type': 'application/json'},
+               body: JSON.stringify({type: type})
+           })
+               .then(res => res.json())
+               .then(data => {
+                   card.querySelectorAll('.reaction-count').forEach(span => {
+                       let t = span.getAttribute('data-type');
+                       let count = data.reactions.filter(function(r){ return r.type === t; }).length;
+                       span.textContent = count;
+                   });
+                   let totalText = card.querySelector('.reaction-total-text');
+                   if (totalText) {
+                       totalText.innerHTML = '<span class="reaction-total">' + data.reactions.length + '</span> ' + (data.reactions.length === 1 ? 'person' : 'people') + ' reacted';
+                   }
+               });
+       });
+   });
+
+   document.querySelectorAll('.delete-post-btn').forEach(btn => {
+       btn.addEventListener('click', function() {
+           let id = this.getAttribute('data-id');
+           if (!confirm('Delete this post?')) return;
+           fetch(`/admin/social/${id}`, { method: 'DELETE' })
+               .then(res => res.json())
+               .then(data => {
+                   if (data.msg === 'Post deleted') this.closest('.post-card').remove();
+                   else alert(data.msg || 'Something went wrong');
+               });
+       });
+   });
+
+   document.addEventListener('click', function(e) {
+       let btn = e.target.closest('.reply-toggle-btn');
+       if (btn) {
+           let wrap = btn.closest('.comment-block').querySelector('.reply-form-wrap');
+           if (wrap) wrap.classList.toggle('d-none');
+       }
+       let commentsToggle = e.target.closest('.comments-toggle-btn');
+       if (commentsToggle) {
+           let section = commentsToggle.closest('.comments-section');
+           if (section) section.classList.toggle('comments-collapsed');
+           let icon = commentsToggle.querySelector('.comments-toggle-icon');
+           let expanded = !section.classList.contains('comments-collapsed');
+           if (commentsToggle.getAttribute) commentsToggle.setAttribute('aria-expanded', expanded);
+       }
+   });
+
+   document.addEventListener('submit', function(e) {
+       let form = e.target.closest('.reply-form');
+       if (!form) return;
+       e.preventDefault();
+       let commentBlock = form.closest('.comment-block');
+       let parentId = commentBlock.getAttribute('data-comment-id');
+       let section = form.closest('.comments');
+       let postId = section.getAttribute('data-post-id');
+       let input = form.querySelector('.reply-input');
+       let text = input && input.value ? input.value.trim() : '';
+       if (!text) return;
+       fetch(`/admin/social/${postId}/comment`, {
+           method: 'POST',
+           headers: {'Content-Type': 'application/json'},
+           body: JSON.stringify({text: text, parent: parentId})
+       })
+           .then(res => res.json())
+               .then(data => {
+                   if (data.comment) {
+                       let repliesEl = commentBlock.querySelector('.replies');
+                       if (!repliesEl) { repliesEl = document.createElement('div'); repliesEl.className = 'replies ms-3 mt-1'; commentBlock.appendChild(repliesEl); }
+                       appendCommentRow(repliesEl, data.comment, parentId);
+                       let section = form.closest('.comments-section');
+                       if (section) updateCommentsCount(section);
+                   }
+                   input.value = '';
+                   form.closest('.reply-form-wrap').classList.add('d-none');
+               })
+           .catch(function() { alert('Could not add reply.'); });
+   });
+
+   document.querySelectorAll('.comment-form').forEach(form => {
+       form.addEventListener('submit', function(e) {
+           e.preventDefault();
+           let section = this.closest('.comments');
+           let postId = section.getAttribute('data-post-id');
+           let input = this.querySelector('.comment-input');
+           let text = input.value.trim();
+           if (!text) return;
+           fetch(`/admin/social/${postId}/comment`, {
+               method: 'POST',
+               headers: {'Content-Type': 'application/json'},
+               body: JSON.stringify({text: text})
+           })
+               .then(res => res.json())
+               .then(data => {
+                   if (data.comment) {
+                       appendCommentRow(section.querySelector('.comment-list'), data.comment, null);
+                       updateCommentsCount(section);
+                   }
+                   input.value = '';
+               })
+               .catch(function() { alert('Could not add comment.'); });
+       });
+   });
+
+   function updateCommentsCount(section) {
+       if (!section) return;
+       var countEl = section.querySelector('.comments-count');
+       if (!countEl) return;
+       var blocks = section.querySelectorAll('.comment-block');
+       countEl.textContent = '(' + blocks.length + ')';
+   }
+   function appendCommentRow(container, comment, parentId) {
+       let section = container.closest('.comments-section');
+       let isPostOwner = section && section.getAttribute('data-post-owner-id') === section.getAttribute('data-current-user-id');
+       let block = document.createElement('div');
+       block.className = 'comment-block mb-2';
+       block.setAttribute('data-comment-id', comment._id);
+       block.setAttribute('data-parent-id', parentId || '');
+       let reactionCounts = { like: 0, love: 0, laugh: 0, wow: 0, sad: 0, angry: 0 };
+       (comment.reactions || []).forEach(function(r) { reactionCounts[r.type] = (reactionCounts[r.type] || 0) + 1; });
+       let dateStr = comment.createdAt ? new Date(comment.createdAt).toLocaleString() : '';
+       let countsHtml = ['like','love','laugh','wow','sad','angry'].map(function(t){
+           return '<button type="button" class="btn btn-sm btn-outline-secondary p-1 comment-reaction-btn" data-comment-id="' + comment._id + '" data-type="' + t + '" title="' + t + '"><i class="bi bi-' + (t==='like'?'hand-thumbs-up':t==='love'?'heart':t==='laugh'?'emoji-laughing':t==='wow'?'emoji-surprise':t==='sad'?'emoji-frown':'emoji-angry') + '"></i><span class="comment-reaction-count" data-type="' + t + '">' + (reactionCounts[t] || 0) + '</span></button>';
+       }).join('');
+       let replyPart = !parentId ? '<button type="button" class="btn btn-link btn-sm p-0 reply-toggle-btn">Reply</button>' : '';
+       let deleteBtnHtml = isPostOwner ? '<button type="button" class="btn btn-link btn-sm p-0 text-danger delete-comment-btn" data-comment-id="' + comment._id + '"><i class="bi bi-trash"></i></button>' : '';
+       block.innerHTML = '<div class="comment-row d-flex justify-content-between align-items-start flex-wrap gap-1 p-2 rounded bg-light"><div class="d-flex flex-column"><span class="fw-semibold small">' + comment.author.username + '</span><span class="small">' + comment.text + '</span><span class="small text-muted">' + dateStr + '</span></div><div class="d-flex align-items-center gap-1"><div class="comment-reactions d-flex flex-wrap gap-1">' + countsHtml + '</div>' + replyPart + deleteBtnHtml + '</div></div>' + (!parentId ? '<div class="reply-form-wrap d-none mt-1 ms-3"><form class="reply-form d-flex gap-2"><input type="text" class="form-control form-control-sm reply-input" placeholder="Reply..." name="text"><button type="submit" class="btn btn-sm btn-primary">Send</button></form></div><div class="replies ms-3 mt-1"></div>' : '');
+       container.appendChild(block);
+       bindCommentReactionButtons(block);
+       bindDeleteCommentButtons(block);
+   }
+
+   function bindCommentReactionButtons(scope) {
+       (scope || document).querySelectorAll('.comment-reaction-btn').forEach(btn => {
+           if (btn._bound) return;
+           btn._bound = true;
+           btn.addEventListener('click', function() {
+               let cid = this.getAttribute('data-comment-id');
+               let type = this.getAttribute('data-type');
+               fetch(`/admin/social/comment/${cid}/reaction`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({type: type}) })
+                   .then(res => res.json())
+                   .then(data => {
+                       let block = this.closest('.comment-block');
+                       block.querySelectorAll('.comment-reaction-count').forEach(span => {
+                           let t = span.getAttribute('data-type');
+                           let count = (data.reactions || []).filter(function(r){ return r.type === t; }).length;
+                           span.textContent = count;
+                       });
+                   });
+           });
+       });
+   }
+   function bindDeleteCommentButtons(scope) {
+       (scope || document).querySelectorAll('.delete-comment-btn').forEach(btn => {
+           if (btn._bound) return;
+           btn._bound = true;
+           btn.addEventListener('click', function() {
+               let cid = this.getAttribute('data-comment-id');
+               let section = this.closest('.comments-section');
+               fetch(`/admin/social/comment/${cid}`, { method: 'DELETE' })
+                   .then(res => res.json())
+                   .then(data => {
+                       if (data.msg === 'Comment deleted') {
+                           this.closest('.comment-block').remove();
+                           updateCommentsCount(section);
+                       } else alert(data.msg || 'Something went wrong');
+                   });
+           });
+       });
+   }
+   bindCommentReactionButtons();
+   bindDeleteCommentButtons();
+</script>
+</body>
+</html>

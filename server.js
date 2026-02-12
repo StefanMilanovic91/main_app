@@ -18,7 +18,7 @@ app.use(express.static(__dirname + "/node_modules/bootstrap/dist/css/"));
 app.use(express.static(__dirname + "/node_modules/bootstrap-icons/font/"));
 app.use(express.static(__dirname + "/node_modules/jquery/dist/"));
 app.use(express.urlencoded({extended: true}));
-
+app.use(express.json());
 
 app.use('/', router);
 

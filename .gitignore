@@ -24,6 +24,9 @@ Thumbs.db
 
 
 
+# Uploads
+public/uploads/
+
 # Temporary files
 *.tmp
 *.temp
