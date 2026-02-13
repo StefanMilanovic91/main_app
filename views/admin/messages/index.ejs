@@ -27,7 +27,7 @@
 						<div class="col-md-4 border-end d-flex flex-column">
 							<div class="mb-3">
 								<select id="conversationSelector" class="form-select">
-									<option disabled hidden selected>Select Conversation</option>
+									<option disabled hidden selected>Select User</option>
 									<!-- @todo: Populate with conversations/users -->
 									<!-- <% users.forEach(user => { %>
                                         <option value="<%= user._id %>"><%= user.username %></option>
@@ -41,7 +41,7 @@
 							></div>
 						</div>
 
-						<div class="col-md-8 d-flex flex-column">
+						<div class="col-md-8 d-flex flex-column" style="max-height: 100%;">
 							<div class="border-bottom pb-2 mb-3">
 								<h5 id="activeUserName" class="mb-0 text-muted">
 									Select a conversation
@@ -71,111 +71,135 @@
 			</div>
 		</div>
 
+		<script src="/socket.io.js"></script>
 		<!-- @todo: Move the following script into /public/js/ folder  -->
 		<script>
 			// @todo: Attach listener on WS event, probably "new-message" event emited from BE
 			// @todo: Fetch conversations and push into "conversations" array, then populate convo selector
-			const conversations = [];
+			let conversations = [
+				{
+					conversationId: 'conv1',
+					participants: ['1', '2'],
+					userName: 'Marko',
+					messages: [{sender: '2', text: 'TEST stesawd test test 12345'}, {sender: '1', text: 'TEST TESTTESTTESTTEST 12345'}],
+				},
+				{
+					conversationId: 'conv2',
+					participants: ['1', '3'],
+					userName: 'Ana',
+					messages: [],
+				},
+			];
+
+			const socket = io();
+			const CURRENT_USER_ID = '1'; // TODO: Continue from here. Fetch user session(logged user)
 
 			let activeConversation = null;
 
-			const conversationList = document.querySelector('#conversationList');
-			const chatMessages = document.querySelector('#chatMessages');
-			const activeUserName = document.querySelector('#activeUserName');
-			const messageInput = document.querySelector('#messageInput');
-			const sendBtn = document.querySelector('#sendBtn');
-			const conversationSelector = document.querySelector('#conversationSelector');
+			socket.on('connect', () => {
+				console.log('Connected:', socket.id);
+				socket.emit('register', CURRENT_USER_ID);
+			});
 
-			function renderConversations(filter = '') {
-				conversationList.innerHTML = '';
+			socket.on('receive_message', ({ conversationId, fromUserId, message }) => {
+				const convo = conversations.find((c) => c.conversationId === conversationId);
 
-				conversations
-					.filter((conversation) => conversation.user.toLowerCase().includes(filter.toLowerCase()))
-					.forEach((conversation) => {
-						console.log(conversation);
-
-						const button = document.createElement('button');
-						button.className = 'list-group-item list-group-item-action';
-						button.innerHTML = `<div class="fw-bold">${conversation.user}</div>`;
-
-						button.addEventListener('click', () => {
-							activeConversation = conversation;
-							renderMessages();
-							highlightActive(conversation.id);
-						});
-
-						button.dataset.id = conversation.id;
-
-						conversationList.appendChild(button);
+				if (convo) {
+					convo.messages.push({
+						sender: fromUserId,
+						text: message,
+						time: new Date().toLocaleTimeString([], {
+							hour: '2-digit',
+							minute: '2-digit',
+						}),
 					});
-			}
 
-			function highlightActive(id) {
-				document.querySelectorAll('#conversationList button').forEach((btn) => {
-					btn.classList.remove('active');
-
-					if (Number(btn.dataset.id) === id) {
-						btn.classList.add('active');
+					if (activeConversation?.conversationId === conversationId) {
+						renderMessages();
 					}
+				}
+			});
+
+			function renderConversations() {
+				const list = document.getElementById('conversationList');
+				list.innerHTML = '';
+
+				conversations.forEach((convo) => {
+					const btn = document.createElement('button');
+					btn.className = 'list-group-item list-group-item-action';
+					btn.textContent = convo.userName;
+
+					btn.addEventListener('click', () => {
+						activeConversation = convo;
+						document.getElementById('activeUserName').textContent = convo.userName;
+						renderMessages();
+					});
+
+					list.appendChild(btn);
 				});
 			}
 
 			function renderMessages() {
-				if (!activeConversation) return;
-
-				activeUserName.textContent = activeConversation.user;
-				chatMessages.innerHTML = '';
+				const container = document.getElementById('chatMessages');
+				container.innerHTML = '';
 
 				activeConversation.messages.forEach((msg) => {
 					const wrapper = document.createElement('div');
 					wrapper.className = `d-flex mb-2 ${
-						msg.sender === 'me' ? 'justify-content-end' : 'justify-content-start'
+						msg.sender === CURRENT_USER_ID
+							? 'justify-content-end'
+							: 'justify-content-start'
 					}`;
 
 					wrapper.innerHTML = `
-                        <div class="p-2 rounded ${msg.sender === 'me' ? 'bg-primary text-white' : 'bg-white border'}" style="max-width: 70%;">
-                            <div>${msg.text}</div>
-                            <small class="text-muted d-block text-end">
-                                ${msg.time}
-                            </small>
-                        </div>
-                    `;
+						<div class="p-2 rounded ${
+							msg.sender === CURRENT_USER_ID
+								? 'bg-primary text-white'
+								: 'bg-white border'
+						}" style="max-width: 70%;">
+							${msg.text}
+						</div>
+					`;
 
-					chatMessages.appendChild(wrapper);
+					container.appendChild(wrapper);
 				});
 
-				chatMessages.scrollTop = chatMessages.scrollHeight;
+				container.scrollTop = container.scrollHeight;
 			}
-
-			sendBtn.addEventListener('click', sendMessage);
-			messageInput.addEventListener('keypress', (e) => {
-				if (e.key === 'Enter') {
-					sendMessage();
-				}
-			});
 
 			function sendMessage() {
 				if (!activeConversation) return;
 
-				const text = messageInput.value.trim();
+				const input = document.getElementById('messageInput');
+				const text = input.value.trim();
 
 				if (!text) return;
 
 				activeConversation.messages.push({
-					sender: 'me',
+					sender: CURRENT_USER_ID,
 					text,
-					time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), // @todo: Try to use Temporal. Check browser support
+					time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
 				});
 
-				messageInput.value = '';
 				renderMessages();
 
-				// @todo: Send message to the BE with WS
+				const toUserId = activeConversation.participants.find(
+					(id) => id !== CURRENT_USER_ID
+				);
+
+				socket.emit('private_message', {
+					conversationId: activeConversation.conversationId,
+					toUserId,
+					fromUserId: CURRENT_USER_ID,
+					message: text,
+				});
+
+				input.value = '';
 			}
 
-			conversationSelector.addEventListener('input', (e) => {
-				// console.log(e.target.value);
-				renderConversations(e.target.value);
+			document.getElementById('sendBtn').addEventListener('click', sendMessage);
+			document.getElementById('messageInput').addEventListener('keypress', (e) => {
+				if (e.key === 'Enter') sendMessage();
 			});
 
 			renderConversations();
